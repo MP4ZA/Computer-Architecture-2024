@@ -1,0 +1,62 @@
+.data
+data:    .word 0x3f000000, 0xc1420000, 0xf0700000
+len:     .word 0x3
+expect:  .word 0x3f000000, 0x41420000, 0x70700000
+endl: .string "\n"
+
+.text
+    # t0: data start address (input)
+    # t1: number of data
+    # t2: data start address (expect output)
+    # t3: hold the value in a0 during a syscall temporarily
+    # t4: hold 0x7FFFFFFF temporarily
+    # a1: fabsf output
+    # a2: expect output
+
+    la  t0, data
+    lw  t1, len
+    la  t2, expect
+
+main:
+    lw  a0, 0(t0)              # show input value       
+    li  a7, 2
+    ecall
+    jal ra, newline
+
+    jal ra, fabsf              # call fabsf       
+    
+    add a1, zero, a0           # show output value    
+    li  a7, 2
+    ecall
+    jal ra, newline
+
+    lw  a2, 0(t2)              # check if the output is equal to the expect answer
+    li  a7, 1
+    bne a1, a2, wrong
+right:                       # If the output is     equal to the expected answer,
+    li  a0, 1                  # load 1 into a0 to print 1
+    j   goback
+wrong:                         # If the output is not equal to the expected answer,
+    li  a0, 0                  # load 0 into a0 to print 0
+goback:
+    ecall
+    jal  ra newline
+    addi t0, t0, 4
+    addi t1, t1,-1
+    addi t2, t2, 4
+    bne  t1, zero, main
+    li   a7, 10
+    ecall
+
+fabsf:                        # fabsf function
+    li  t4, 0x7fffffff
+    and a0, a0, t4
+    ret
+
+newline:                      # to print "\n"
+    mv  t3, a0
+    la  a0, endl
+    li  a7, 4
+    ecall
+    mv  a0, t3
+    ret

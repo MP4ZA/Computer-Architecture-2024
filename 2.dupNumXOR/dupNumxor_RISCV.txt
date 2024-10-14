@@ -1,0 +1,68 @@
+.data
+len:    .word 3             # number of dataset
+size:   .word 4, 14, 16     # length of every dataset
+dataset:  
+.word 1, 2, 1, 3 
+.word 1, 2, 3, 4, 6, 7, 8, 2, 9, 9, 3, 5, 1, 5
+.word 3, 49, 49, 3, 8, 12, 19, 19, 28, 27, 28, 50, 31, 36, 50, 36
+expect: .word 1, 12, 43
+endl:       .string "\n"
+
+.text
+    lw  s1, len    
+    la  s2, size    
+    la  s3, dataset
+main: 
+    lw a1, 0(s2)            # numsSize
+    li s5, 0
+    jal ra dupNumXOR        # (s5 < numsSize) print(nums[i])
+    li  a7, 1
+    ecall
+    jal ra newline          # print "\n"
+    addi s2, s2,4           # the next dataset
+    addi s1, s1,-1          # < len keep doing
+    bne  s1, zero, main     # goback
+    li   a7, 10             # quit
+    ecall
+
+
+dupNumXOR:                      # duplicateNumbersXOR function
+    li s6 0                     # xor result
+    li s7 0                     # set_A (the  left half bits)
+    li s8 0                     # set_B (the right half bits)
+    li s11 0
+    li t5 1
+loop:
+    lw s9, 0(s3)                # s9 = nums[i]
+    li  t4 32
+    bge s9 t4 left_half_bits    # If nums[i] > 31, it belongs to the upper half of the bits
+right_half_bits:                # s8: set_B (the right half bits)
+    sll  t4,  t5, s9
+    and  s10, s8, t4
+    beqz s10, right_skipxor     # if not(set & (1ULL << nums[i]))
+    xor   s6, s6 ,s9    
+right_skipxor:
+    or   s8,  s8, t4
+    j loop_goback
+left_half_bits:                 # s7: set_A (the  left half bits)
+    addi t4,  s9, -31           # (nums[i] - 31)
+    sll  t4,  t5, t4
+    and  s10, s7, t4
+    beqz s10, left_skipxor      # if not(set & (1ULL << nums[i]))
+    xor   s6, s6, s9    
+left_skipxor:
+    or   s7,  s7, t4
+loop_goback:
+    addi s3,   s3, 4            # iter nums[i] -> nums[i+1]
+    addi s11, s11, 1            # i<numsSize; i++;                        
+    blt  s11,  a1, loop      
+    mv a0 s6                    # quit
+    ret
+
+newline:                        # to print "\n"
+    mv  t6, a0
+    la  a0, endl
+    li  a7, 4
+    ecall                           
+    mv  a0, t6
+    ret
